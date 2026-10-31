@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fa">
+  <title>성과 인사이트 · KPI 대시보드</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="주 메뉴">
+      <a class="brand" href="#top" aria-label="KPI 대시보드 홈"><span class="brand-mark">k</span><span>orbit<span class="brand-dot">.</span></span></a>
+      <div class="workspace"><span class="workspace-icon">O</span><span><b>Orbit Studio</b><small>워크스페이스</small></span><span class="chevron">⌄</span></div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav><a class="nav-item active" href="#dashboard"><span>▦</span>성과 대시보드</a><a class="nav-item" href="#evidence"><span>▤</span>KPI 데이터</a></nav>
+      <div class="sidebar-bottom"><div class="help-card"><span class="help-icon">✦</span><b>좋은 성과는<br>한눈에 보여요</b><p>목표와 실적의 흐름을<br>꾸준히 확인해 보세요.</p><a href="#evidence">데이터 입력하기 <span>↗</span></a></div><div class="profile"><div class="avatar">이</div><div><b>이수현</b><small>성과 담당자</small></div><span class="dots">···</span></div></div>
+    </aside>
+    <main id="top">
+      <header class="topbar"><div class="breadcrumb">워크스페이스 <span>/</span> <b>성과 대시보드</b></div><div class="top-actions"><span class="mode-badge"><i></i> 샘플 모드</span><button class="icon-button" aria-label="알림">♧<em></em></button><div class="mini-avatar">이</div></div></header>
+      <section class="page" id="dashboard">
+        <div class="title-row"><div><div class="eyebrow">PERFORMANCE OVERVIEW <span class="spark">✦</span></div><h1>성과 대시보드</h1><p class="subtitle">목표와 실적을 비교하고, 팀의 성과 흐름을 확인해 보세요.</p></div><button class="primary-button" id="open-form"><span>＋</span> KPI 입력</button></div>
+        <div class="filters" aria-label="성과 필터"><label>조회 월<select id="month-filter" aria-label="조회 월"></select></label><span class="filter-divider"></span><label>부서<select id="team-filter" aria-label="부서"><option value="all">전체 부서</option></select></label><span class="filter-note"><span class="sync-dot"></span> 방금 업데이트됨</span></div>
+        <div class="summary-grid" aria-live="polite">
+          <article class="summary-card"><div class="card-head"><span>목표 합계</span><span class="metric-icon target">◎</span></div><div class="metric-value" id="target-total">—</div><div class="card-foot"><span class="muted">선택한 조건의 목표 금액</span></div></article>
+          <article class="summary-card"><div class="card-head"><span>실적 합계</span><span class="metric-icon actual">↗</span></div><div class="metric-value" id="actual-total">—</div><div class="card-foot"><span class="trend-pill" id="actual-change">—</span><span class="muted">목표 대비 실적</span></div></article>
+          <article class="summary-card achievement-card"><div class="card-head"><span>목표 달성률</span><span class="metric-icon rate">◉</span></div><div class="rate-line"><div class="metric-value" id="achievement">—</div><div class="rate-caption" id="achievement-label">실적 ÷ 목표</div></div><div class="progress-track"><div class="progress-fill" id="progress"></div></div><div class="card-foot"><span class="muted">선택한 조건의 달성률</span><span class="progress-caption" id="progress-label">—</span></div></article>
+        </div>
+        <div class="section-heading"><div><div class="section-kicker">TEAM PERFORMANCE</div><h2>부서별 실적</h2></div><span class="section-context" id="chart-context">—</span></div>
+        <section class="chart-card" aria-label="부서별 목표와 실적 차트"><div class="chart-legend"><span><i class="legend-target"></i>목표</span><span><i class="legend-actual"></i>실적</span><span class="chart-unit">단위: 원</span></div><div id="chart" class="chart-area"></div></section>
+        <section class="evidence-section" id="evidence"><div class="section-heading evidence-heading"><div><div class="section-kicker">PERFORMANCE DETAILS</div><h2>상세 근거표</h2><p>부서별 목표와 실적 데이터를 확인할 수 있어요.</p></div><button class="secondary-button" id="open-form-secondary">＋ <span>데이터 추가</span></button></div>
+          <div class="table-card"><div class="table-meta"><span id="result-count">0건</span><span>단위: 원</span></div><div class="table-scroll"><table><thead><tr><th scope="col">기준 월</th><th scope="col">부서</th><th scope="col" class="numeric">목표</th><th scope="col" class="numeric">실적</th><th scope="col" class="numeric">달성률</th><th scope="col">상태</th></tr></thead><tbody id="evidence-rows"></tbody></table></div><div class="empty-state" id="empty-state" hidden><div class="empty-art">⌕</div><b id="empty-title">조건에 맞는 데이터가 없어요</b><p id="empty-message">월과 부서 필터를 바꾸거나 데이터를 추가해 보세요.</p><button class="secondary-button" id="empty-add">＋ 데이터 입력</button></div><div class="error-state" id="error-state" hidden role="alert"><span>!</span><div><b>데이터를 불러오지 못했어요</b><p id="error-message">잠시 후 다시 시도해 주세요.</p></div><button class="text-button" id="retry-load">다시 시도</button></div></div>
+        </section>
+        <footer class="page-footer"><span><i></i> 샘플 데이터로 미리보기 중</span><span>샘플 변경 사항은 이 브라우저 세션에만 반영됩니다.</span></footer>
+      </section>
+    </main>
+  </div>
+  <dialog id="entry-dialog" aria-labelledby="dialog-title"><form id="entry-form"><div class="dialog-head"><div><div class="section-kicker">NEW KPI RECORD</div><h2 id="dialog-title">KPI 데이터 입력</h2></div><button type="button" class="dialog-close" id="close-form" aria-label="닫기">×</button></div><p class="dialog-description">월과 부서를 선택하고 목표·실적을 입력해 주세요.</p><label class="field-label" for="entry-month">기준 월</label><input id="entry-month" name="month" type="month" required><label class="field-label" for="entry-team">부서명</label><input id="entry-team" name="team" type="text" maxlength="80" placeholder="예: 영업A" required><div class="number-fields"><div><label class="field-label" for="entry-target">목표 금액 <small>원</small></label><input id="entry-target" name="target" type="number" min="0" step="1" inputmode="numeric" placeholder="0" required></div><div><label class="field-label" for="entry-actual">실적 금액 <small>원</small></label><input id="entry-actual" name="actual" type="number" min="0" step="1" inputmode="numeric" placeholder="0" required></div></div><p class="form-error" id="form-error" role="alert" hidden></p><div class="dialog-actions"><button type="button" class="secondary-button" id="cancel-form">취소</button><button type="submit" class="primary-button" id="save-record">저장하기</button></div></form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
