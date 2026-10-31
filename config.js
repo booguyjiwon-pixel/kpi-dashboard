@@ -2,6 +2,6 @@
 // 프로젝트 주소와 publishable key만 설정하세요.
 // 비밀번호, secret key, service_role key는 넣지 마세요.
 window.KPI_CONFIG = {
-  supabaseUrl: "YOUR_PROJECT_URL",
-  supabasePublishableKey: "YOUR_PUBLISHABLE_KEY"
+  supabaseUrl: "https://rzdprcckfucqkbiouuut.supabase.co",
+  supabasePublishableKey: "sb_publishable_QTzUxzUQyrESlos9l1w1Lw_CsJRdIYH"
 };

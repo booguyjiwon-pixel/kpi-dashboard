@@ -8,6 +8,47 @@ let records = [];
 let loadFailed = false;
 let loading = false;
 let toastTimer;
+let activeUserId;
+let loadSequence = 0;
+let authEventSequence = 0;
+
+const databaseMode = repository.isConfigured();
+
+function setAuthMessage(message, isError = false) {
+  const messageNode = $('#auth-message');
+  messageNode.textContent = message;
+  messageNode.hidden = !message;
+  messageNode.classList.toggle('auth-message-error', isError);
+}
+
+function showLoginState(message = '') {
+  $('#auth-panel').hidden = false;
+  $('#dashboard-content').hidden = true;
+  $('#open-form').hidden = true;
+  $('#login-form').hidden = false;
+  $('#auth-signed-in').hidden = true;
+  $('#auth-title').textContent = '계정 로그인';
+  $('#auth-description').textContent = '본인 계정으로 로그인하면 본인 KPI 데이터만 불러옵니다.';
+  setAuthMessage(message, Boolean(message));
+}
+
+function clearPrivateDashboard() {
+  records = [];
+  loadFailed = false;
+  loadSequence += 1;
+  setupFilters();
+  render();
+}
+
+function presentSignedInState() {
+  $('#auth-panel').hidden = false;
+  $('#login-form').hidden = true;
+  $('#auth-signed-in').hidden = false;
+  $('#auth-title').textContent = 'Supabase 계정 연결됨';
+  $('#auth-description').textContent = '현재 로그인한 계정의 KPI 데이터만 조회·저장합니다.';
+  $('#open-form').hidden = false;
+  setAuthMessage('로그인 상태를 확인했습니다. 본인 데이터만 불러옵니다.');
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -76,21 +117,31 @@ function render() {
 }
 
 async function load() {
-  if (loading) return;
+  if (databaseMode && !activeUserId) return false;
+  const requestId = ++loadSequence;
+  const expectedUserId = activeUserId;
   loading = true;
   $('#retry-load').disabled = true;
   try {
-    records = await repository.read();
+    const nextRecords = await repository.read();
+    if (requestId !== loadSequence || (databaseMode && expectedUserId !== activeUserId)) return false;
+    records = nextRecords;
     loadFailed = false;
     setupFilters();
     render();
+    return true;
   } catch (error) {
+    if (requestId !== loadSequence || (databaseMode && expectedUserId !== activeUserId)) return false;
+    records = [];
     loadFailed = true;
     $('#error-message').textContent = error.message || '잠시 후 다시 시도해 주세요.';
     render();
+    return false;
   } finally {
-    loading = false;
-    $('#retry-load').disabled = false;
+    if (requestId === loadSequence) {
+      loading = false;
+      $('#retry-load').disabled = false;
+    }
   }
 }
 
@@ -119,6 +170,39 @@ $('#cancel-form').addEventListener('click', () => dialog.close());
 monthFilter.addEventListener('change', render);
 teamFilter.addEventListener('change', render);
 $('#retry-load').addEventListener('click', load);
+$('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = $('#login-button');
+  const email = $('#login-email').value.trim();
+  const password = $('#login-password').value;
+  button.disabled = true;
+  button.textContent = '로그인 중…';
+  setAuthMessage('Supabase 계정을 확인하고 있습니다.');
+  try {
+    const result = await repository.signIn(email, password);
+    if (result.user) await applyAuthenticatedUser(result.user);
+  } catch (error) {
+    setAuthMessage(error.message || '로그인하지 못했습니다. 이메일과 비밀번호를 확인해 주세요.', true);
+  } finally {
+    $('#login-password').value = '';
+    button.disabled = false;
+    button.textContent = '로그인';
+  }
+});
+
+$('#logout-button').addEventListener('click', async () => {
+  const button = $('#logout-button');
+  button.disabled = true;
+  try {
+    await repository.signOut();
+    await applyAuthenticatedUser(null);
+  } catch (error) {
+    setAuthMessage(error.message || '로그아웃하지 못했습니다.', true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
 $('#entry-form').addEventListener('submit', async event => {
   event.preventDefault();
   const submit = $('#save-record');
@@ -129,8 +213,14 @@ $('#entry-form').addEventListener('submit', async event => {
     const input = validateRecord({ month: form.get('month'), team: form.get('team'), target: Number(form.get('target')), actual: Number(form.get('actual')) });
     await repository.save(input);
     dialog.close();
-    await load();
-    showToast('KPI 데이터를 저장했어요.');
+    const refreshed = await load();
+    if (refreshed) {
+      monthFilter.value = input.month;
+      teamFilter.value = input.team;
+      render();
+      showToast(databaseMode ? 'KPI 데이터를 DB에 저장하고 다시 불러왔어요.' : 'KPI 데이터를 샘플 세션에 저장했어요.');
+    }
+    else showToast('저장 응답은 받았지만 목록 재조회에 실패했습니다. 다시 조회해 확인해 주세요.', true);
   } catch (error) {
     $('#form-error').textContent = error.message || '저장하지 못했습니다. 입력을 확인해 주세요.';
     $('#form-error').hidden = false;
@@ -140,4 +230,81 @@ $('#entry-form').addEventListener('submit', async event => {
   }
 });
 
-load();
+async function applyAuthenticatedUser(user) {
+  const nextUserId = user?.id || null;
+  if (nextUserId === activeUserId) return;
+  activeUserId = nextUserId;
+  clearPrivateDashboard();
+  if (!nextUserId) {
+    showLoginState();
+    return;
+  }
+  presentSignedInState();
+  $('#dashboard-content').hidden = false;
+  await load();
+}
+
+async function initializeDataMode() {
+  document.body.classList.toggle('database-mode', databaseMode);
+  if (!databaseMode) {
+    $('#mode-label').textContent = '샘플 모드';
+    $('#auth-panel').hidden = true;
+    $('#dashboard-content').hidden = false;
+    $('#open-form').hidden = false;
+    $('#sample-notice').hidden = false;
+    await load();
+    return;
+  }
+
+  $('#mode-label').textContent = 'DB 모드';
+  $('#footer-mode').textContent = 'Supabase 본인 데이터';
+  $('#footer-note').textContent = '로그인 세션은 브라우저에 유지되며 KPI 행은 Supabase에 저장됩니다.';
+  $('#sample-notice').hidden = true;
+  $('#dashboard-content').hidden = true;
+  $('#open-form').hidden = true;
+  showLoginState();
+  setAuthMessage('Supabase 로그인 상태를 확인하고 있습니다.');
+  $('#login-form').hidden = true;
+
+  const initError = repository.getInitializationError();
+  if (initError) {
+    $('#auth-title').textContent = 'Supabase 연결 설정 오류';
+    setAuthMessage(initError.message, true);
+    return;
+  }
+
+  try {
+    repository.onAuthStateChange(session => {
+      const eventSequence = ++authEventSequence;
+      queueMicrotask(() => {
+        const resolveUser = session ? repository.getCurrentUser() : Promise.resolve(null);
+        resolveUser.then(user => {
+          if (eventSequence !== authEventSequence) return;
+          return applyAuthenticatedUser(user);
+        }).catch(error => {
+          if (eventSequence !== authEventSequence) return;
+          activeUserId = null;
+          clearPrivateDashboard();
+          showLoginState(error.message || '로그인 상태를 확인하지 못했습니다. 다시 로그인해 주세요.');
+        });
+      });
+    });
+    const snapshotSequence = authEventSequence;
+    const session = await repository.getSession();
+    const user = session ? await repository.getCurrentUser() : null;
+    if (snapshotSequence !== authEventSequence) return;
+    if (user) await applyAuthenticatedUser(user);
+    else {
+      activeUserId = null;
+      showLoginState();
+    }
+  } catch (error) {
+    // A newer auth event supersedes a stale session snapshot or its network error.
+    if (authEventSequence > 0 && activeUserId !== undefined) return;
+    activeUserId = null;
+    clearPrivateDashboard();
+    showLoginState(error.message || 'Supabase에 연결하지 못했습니다. 설정과 인터넷 연결을 확인해 주세요.');
+  }
+}
+
+initializeDataMode();
